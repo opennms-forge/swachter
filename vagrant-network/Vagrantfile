@@ -62,9 +62,12 @@ Vagrant.configure("2") do |config|
     SECONDS=0
 
     export VAGRANT_USER_HOME=/home/vagrant
+    source /vagrant/.envrc
 
     cd /vagrant/provision
     chmod +x *.sh
+
+    apt-get update -y
 
     ./provision-bash.sh
     ./provision-tools.sh

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "### provision pmacct..."
+
 apt-get install -y pmacct
 cat > /etc/pmacct/pmacctd.conf <<EOF
 daemonize: true

@@ -6,7 +6,7 @@ for a in `find /vagrant/home -name "*" -type f` ; do
   ln -rs $a /home/vagrant
 done
 echo "export PATH=$PATH:/vagrant/bin" >> $VAGRANT_USER_HOME/.bashrc
-# echo "source /vagrant/.envrc" >> $VAGRANT_USER_HOME/.bashrc
+echo "source /vagrant/.envrc" >> $VAGRANT_USER_HOME/.bashrc
 
 echo update locale
 update-locale LANG=en_US.UTF-8
