@@ -14,7 +14,7 @@ try {
   val vec = lines.grouped(6).find(v => v(2).contains(boxStaticIp)).get
 
   // match the first and second line of the found block of lines with regular expressions
-  // -> extract the interface number / name and mac address
+  // -> extract the interface number, interface name and mac address
   val Line0 = """(\d+):\s+([^:]+):.*""".r
   val Line1 = """\s+link/ether\s+(\S+).*""".r
 
@@ -50,8 +50,8 @@ try {
       |set_tag=2 filter='ether src $macAddress' jeq=eval_ifindexes
       |
       |# Use a filter to set the ifindexes
-      |set_tag2=2 filter='ether src $macAddress' label=eval_ifindexes
-      |set_tag2=2 filter='ether dst $macAddress'
+      |set_tag2=$interfaceNumber filter='ether src $macAddress' label=eval_ifindexes
+      |set_tag2=$interfaceNumber filter='ether dst $macAddress'
       |""".stripMargin
 
   write.over(root/"etc"/"pmacct"/"pmacctd.conf", pmacctdConf)
