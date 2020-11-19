@@ -5,7 +5,7 @@
 # based on https://github.com/fooker/fooktils/blob/master/opennms-deploy
 
 # Parse arguments
-while getopts 'bBxdoh' OPTFLAG; do
+while getopts 'bBxsdoh' OPTFLAG; do
     case "${OPTFLAG}" in
     'b')
         BUILD='yes'
@@ -19,7 +19,9 @@ while getopts 'bBxdoh' OPTFLAG; do
     'x')
         PURGE='yes'
         ;;
-
+    's')
+        START='yes'
+        ;;
     'd')
         DEBUG='yes'
         ;;
@@ -36,6 +38,7 @@ while getopts 'bBxdoh' OPTFLAG; do
                 -b      Build the source
                 -B      Clean the source before build (implies -b)
                 -x      Purge the the database before deployment
+                -s      Start opennms
                 -d      Start opennms in debug mode
                 -o      Open browser
 EOF
@@ -52,23 +55,26 @@ done
 [[ "${BUILD}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mBuild the source\033[0m"
 [[ "${CLEAN}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mClean the source before build\033[0m"
 [[ "${PURGE}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mPurge database before installation\033[0m"
-[[ "${DEBUG}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mEnable debug port\033[0m"
+[[ "${START}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mStart OpenNMS\033[0m"
+[[ "${DEBUG}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mStart OpenNMS in debug mode\033[0m"
 
 # Define the target
 TARGET=/opt/opennms
 
-# Try to stop existing target if not empty
-if [[ -x "${TARGET}/bin/opennms" && -f "${TARGET}/etc/configured" ]]; then
-    echo -e "\033[0;37m==> \033[1;37mStop existing OpenNMS instance\033[0m"
-    sudo ${TARGET}/bin/opennms -v stop
-fi
+if [[ "$START" == 'yes' || "$DEBUG" == 'yes' ]]; then
+    # Try to stop existing target if not empty
+    if [[ -x "${TARGET}/bin/opennms" && -f "${TARGET}/etc/configured" ]]; then
+        echo -e "\033[0;37m==> \033[1;37mStop existing OpenNMS instance\033[0m"
+        sudo ${TARGET}/bin/opennms -v stop
+    fi
 
-# Clean existing deployment
-echo -e "\033[0;37m==> \033[1;37mClean existing deployment\033[0m"
-sudo find "${TARGET}" \
-    -depth \
-    -mindepth 1 \
-    -delete
+    # Clean existing deployment
+    echo -e "\033[0;37m==> \033[1;37mClean existing deployment\033[0m"
+    sudo find "${TARGET}" \
+        -depth \
+        -mindepth 1 \
+        -delete
+fi
 
 # Clean the source tree
 if [[ "${CLEAN}" == 'yes' ]]; then
@@ -102,25 +108,28 @@ fi
 # Make the source path absolute
 SOURCE="$(realpath "${SOURCE}")"
 
-# Copy and link directories
-echo -e "\033[0;37m==> \033[1;37mCopy build to target\033[0m"
-cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/etc"
-cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/data"
-cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/share"
-cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/logs"
+if [[ "$DEBUG" == 'yes' || "$START" == 'yes' ]]; then
 
-ln --symbolic -t "${TARGET}" "${SOURCE}/bin"
-ln --symbolic -t "${TARGET}" "${SOURCE}/contrib"
-ln --symbolic -t "${TARGET}" "${SOURCE}/docs"
-ln --symbolic -t "${TARGET}" "${SOURCE}/jetty-webapps"
-ln --symbolic -t "${TARGET}" "${SOURCE}/lib"
-ln --symbolic -t "${TARGET}" "${SOURCE}/deploy"
-ln --symbolic -t "${TARGET}" "${SOURCE}/system"
+    # Copy and link directories
+    echo -e "\033[0;37m==> \033[1;37mCopy build to target\033[0m"
+    cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/etc"
+    cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/data"
+    cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/share"
+    cp --recursive --reflink=auto -t "${TARGET}" "${SOURCE}/logs"
 
-# Copy configuration
-if [ -d "${TARGET}.template" ]; then
-    echo -e "\033[0;37m==> \033[1;37mCopy configuration template to target\033[0m"
-    rsync --recursive "${TARGET}.template/" "${TARGET}"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/bin"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/contrib"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/docs"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/jetty-webapps"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/lib"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/deploy"
+    ln --symbolic -t "${TARGET}" "${SOURCE}/system"
+
+    # Copy configuration
+    if [ -d "${TARGET}.template" ]; then
+        echo -e "\033[0;37m==> \033[1;37mCopy configuration template to target\033[0m"
+        rsync --recursive "${TARGET}.template/" "${TARGET}"
+    fi
 fi
 
 # Create database
@@ -129,39 +138,44 @@ if [[ "${PURGE}" == 'yes' ]]; then
     createdb -O opennms opennms
 fi
 
-# Configure java
-echo -e "\033[0;37m==> \033[1;37mConfigure Java version\033[0m"
-sudo ${TARGET}/bin/runjava \
-    -s
+if [[ "$DEBUG" == 'yes' || "$START" == 'yes' ]]; then
 
-# Run installation / update
-echo -e "\033[0;37m==> \033[1;37mConfigure OpenNMS instance\033[0m"
-sudo ${TARGET}/bin/install \
-    -d \
-    -i \
-    -s \
-    -l "$(realpath "$(dirname "${0}")/jicmp/.libs"):$(realpath "$(dirname "${0}")/jicmp6/.libs"):$(realpath "$(dirname "${0}")/jrrd2/dist")"
+    # Configure java
+    echo -e "\033[0;37m==> \033[1;37mConfigure Java version\033[0m"
+    sudo ${TARGET}/bin/runjava \
+        -s
+
+    # Run installation / update
+    echo -e "\033[0;37m==> \033[1;37mConfigure OpenNMS instance\033[0m"
+    sudo ${TARGET}/bin/install \
+        -d \
+        -i \
+        -s \
+        -l "$(realpath "$(dirname "${0}")/jicmp/.libs"):$(realpath "$(dirname "${0}")/jicmp6/.libs"):$(realpath "$(dirname "${0}")/jrrd2/dist")"
+fi
 
 # Start target
 if [[ "${DEBUG}" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance in debug mode\033[0m"
     sudo ${TARGET}/bin/opennms -v -t start
-else
+elif [[ "$START" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance\033[0m"
     sudo ${TARGET}/bin/opennms -v start
 fi
 
-# Wait for OSGi manhole to bekome available and enable module reloading
-while ! nc -z localhost 8101; do echo -n '.'; sleep 0.1; done
-sshpass -p admin \
-ssh \
-    -l admin \
-    -p 8101 \
-    -o "StrictHostKeyChecking no" \
-    -o "NoHostAuthenticationForLocalhost yes" \
-    -o "HostKeyAlgorithms +ssh-dss" \
-    localhost \
-bundle:watch '*'
+if [[ "$DEBUG" == 'yes' || "$START" == 'yes' ]]; then
+    # Wait for OSGi manhole to bekome available and enable module reloading
+    while ! nc -z localhost 8101; do echo -n '.'; sleep 0.1; done
+    sshpass -p admin \
+    ssh \
+        -l admin \
+        -p 8101 \
+        -o "StrictHostKeyChecking no" \
+        -o "NoHostAuthenticationForLocalhost yes" \
+        -o "HostKeyAlgorithms +ssh-dss" \
+        localhost \
+    bundle:watch '*'
+fi
 
 # Open browser window
 if [[ "${OPEN}" == 'yes' ]]; then
