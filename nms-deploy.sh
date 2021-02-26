@@ -4,8 +4,10 @@
 #
 # based on https://github.com/fooker/fooktils/blob/master/opennms-deploy
 
+SUSPEND='no'
+
 # Parse arguments
-while getopts 'bBxsdoh' OPTFLAG; do
+while getopts 'bBxsdDorh' OPTFLAG; do
     case "${OPTFLAG}" in
     'b')
         BUILD='yes'
@@ -16,6 +18,9 @@ while getopts 'bBxsdoh' OPTFLAG; do
         CLEAN='yes'
         ;;
 
+    'r')
+        RESOLVE='yes'
+        ;;
     'x')
         PURGE='yes'
         ;;
@@ -24,6 +29,10 @@ while getopts 'bBxsdoh' OPTFLAG; do
         ;;
     'd')
         DEBUG='yes'
+        ;;
+    'D')
+        DEBUG='yes'
+        SUSPEND='yes'
         ;;
     'o')
         OPEN='yes'
@@ -35,11 +44,13 @@ while getopts 'bBxsdoh' OPTFLAG; do
             Deploy the opennms build from the current source tree to the system.
 
                 -h      Display this help and exit
+                -r      Resolve dependencies
                 -b      Build the source
                 -B      Clean the source before build (implies -b)
                 -x      Purge the the database before deployment
                 -s      Start opennms
                 -d      Start opennms in debug mode
+                -D      Start opennms in debug mode and suspend until debugger is attached
                 -o      Open browser
 EOF
         exit 254
@@ -60,6 +71,10 @@ done
 
 # Define the target
 TARGET=/opt/opennms
+
+if [[ "$RESOLVE" == 'yes' ]]; then
+  mvn dependency:resolve
+fi
 
 if [[ "$START" == 'yes' || "$DEBUG" == 'yes' ]]; then
     # Try to stop existing target if not empty
@@ -156,8 +171,12 @@ fi
 
 # Start target
 if [[ "${DEBUG}" == 'yes' ]]; then
+    tSwitch=t
+    if [[ "${SUSPEND}" == 'yes' ]]; then
+      tSwitch=T
+    fi
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance in debug mode\033[0m"
-    sudo ${TARGET}/bin/opennms -v -t start
+    sudo ${TARGET}/bin/opennms -v -$tSwitch start
 elif [[ "$START" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance\033[0m"
     sudo ${TARGET}/bin/opennms -v start
