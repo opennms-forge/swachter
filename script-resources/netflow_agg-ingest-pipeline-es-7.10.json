@@ -1,0 +1,17 @@
+{
+  "description": "sets the range multi-field in flow summaries",
+  "processors": [
+    {
+      "set": {
+        "field": "range.gte",
+        "value": "{{range_start}}"
+      }
+    },
+    {
+      "set": {
+        "field": "range.lte",
+        "value": "{{range_end}}"
+      }
+    }
+  ]
+}
