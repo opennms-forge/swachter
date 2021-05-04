@@ -7,7 +7,7 @@
 SUSPEND='no'
 
 # Parse arguments
-while getopts 'bBxsdDorh' OPTFLAG; do
+while getopts 'bBqxsdDorh' OPTFLAG; do
     case "${OPTFLAG}" in
     'b')
         BUILD='yes'
@@ -37,6 +37,9 @@ while getopts 'bBxsdDorh' OPTFLAG; do
     'o')
         OPEN='yes'
         ;;
+    'q')
+        STOP='yes'
+        ;;
 
     *)
         cat <<- EOF
@@ -52,6 +55,7 @@ while getopts 'bBxsdDorh' OPTFLAG; do
                 -d      Start opennms in debug mode
                 -D      Start opennms in debug mode and suspend until debugger is attached
                 -o      Open browser
+                -q      Stop opennms
 EOF
         exit 254
     esac
@@ -68,6 +72,7 @@ done
 [[ "${PURGE}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mPurge database before installation\033[0m"
 [[ "${START}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mStart OpenNMS\033[0m"
 [[ "${DEBUG}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mStart OpenNMS in debug mode\033[0m"
+[[ "${STOP}"    == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mStop OpenNMS\033[0m"
 
 # Define the target
 TARGET=/opt/opennms
@@ -76,7 +81,7 @@ if [[ "$RESOLVE" == 'yes' ]]; then
   mvn dependency:resolve
 fi
 
-if [[ "$START" == 'yes' || "$DEBUG" == 'yes' ]]; then
+if [[ "$START" == 'yes' || "$DEBUG" == 'yes' || "$STOP" == 'yes' ]]; then
     # Try to stop existing target if not empty
     if [[ -x "${TARGET}/bin/opennms" && -f "${TARGET}/etc/configured" ]]; then
         echo -e "\033[0;37m==> \033[1;37mStop existing OpenNMS instance\033[0m"
