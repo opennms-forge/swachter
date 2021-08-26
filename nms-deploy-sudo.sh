@@ -61,6 +61,11 @@ EOF
     esac
 done
 
+# Ensure we are running as root
+#if [[ "${USER}" != "root" ]]; then
+#    exec sudo "${0}" "${@}"
+#fi
+
 # Configuration output
 [[ "${BUILD}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mBuild the source\033[0m"
 [[ "${CLEAN}"   == 'yes' ]] && echo -e "\033[0;35m: \033[1;35mClean the source before build\033[0m"
@@ -80,12 +85,12 @@ if [[ "$START" == 'yes' || "$DEBUG" == 'yes' || "$STOP" == 'yes' ]]; then
     # Try to stop existing target if not empty
     if [[ -x "${TARGET}/bin/opennms" && -f "${TARGET}/etc/configured" ]]; then
         echo -e "\033[0;37m==> \033[1;37mStop existing OpenNMS instance\033[0m"
-        ${TARGET}/bin/opennms -v stop
+        sudo ${TARGET}/bin/opennms -v stop
     fi
 
     # Clean existing deployment
     echo -e "\033[0;37m==> \033[1;37mClean existing deployment\033[0m"
-    find "${TARGET}" \
+    sudo find "${TARGET}" \
         -depth \
         -mindepth 1 \
         -delete
@@ -100,10 +105,6 @@ fi
 # Build the source tree
 if [[ "${BUILD}" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mBuild the source\033[0m"
-    # ensure that the target folder is deleted
-    # -> when OpenNms versions are changed (by changing the branch) this results in different target artifacts
-    # -> later on this script would not know which one to start
-    rm -rf target
     ./compile.pl -DskipTests -DskipITs
     ./assemble.pl -DskipTests -DskipITs -Dopennms.home=/opt/opennms -pdir
 fi
@@ -161,12 +162,12 @@ if [[ "$DEBUG" == 'yes' || "$START" == 'yes' ]]; then
 
     # Configure java
     echo -e "\033[0;37m==> \033[1;37mConfigure Java version\033[0m"
-    ${TARGET}/bin/runjava \
+    sudo ${TARGET}/bin/runjava \
         -s
 
     # Run installation / update
     echo -e "\033[0;37m==> \033[1;37mConfigure OpenNMS instance\033[0m"
-    ${TARGET}/bin/install \
+    sudo ${TARGET}/bin/install \
         -d \
         -i \
         -s \
@@ -180,10 +181,10 @@ if [[ "${DEBUG}" == 'yes' ]]; then
       tSwitch=T
     fi
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance in debug mode\033[0m"
-    ${TARGET}/bin/opennms -v -$tSwitch start
+    sudo ${TARGET}/bin/opennms -v -$tSwitch start
 elif [[ "$START" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mStart OpenNMS instance\033[0m"
-    ${TARGET}/bin/opennms -v start
+    sudo ${TARGET}/bin/opennms -v start
 fi
 
 if [[ "$DEBUG" == 'yes' || "$START" == 'yes' ]]; then
@@ -205,4 +206,3 @@ if [[ "${OPEN}" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mOpen browser\033[0m"
     xdg-open "http://localhost:8980/opennms" &
 fi
-
