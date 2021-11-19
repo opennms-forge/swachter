@@ -7,14 +7,19 @@
 SUSPEND='no'
 
 # Parse arguments
-while getopts 'bBqxsdDorh' OPTFLAG; do
+while getopts 'abBqxsdDorh' OPTFLAG; do
     case "${OPTFLAG}" in
+    'a')
+        ASSEMBLE='yes'
+        ;;
     'b')
         BUILD='yes'
+        ASSEMBLE='yes'
         ;;
 
     'B')
         BUILD='yes'
+        ASSEMBLE='yes'
         CLEAN='yes'
         ;;
 
@@ -48,8 +53,9 @@ while getopts 'bBqxsdDorh' OPTFLAG; do
 
                 -h      Display this help and exit
                 -r      Resolve dependencies
-                -b      Build the source
-                -B      Clean the source before build (implies -b)
+                -a      Assemble the build
+                -b      Build the source (implies -a)
+                -B      Clean the source before build (implies -ab)
                 -x      Purge the the database before deployment
                 -s      Start opennms
                 -d      Start opennms in debug mode
@@ -105,6 +111,11 @@ if [[ "${BUILD}" == 'yes' ]]; then
     # -> later on this script would not know which one to start
     rm -rf target
     ./compile.pl -DskipTests -DskipITs
+fi
+
+# Build the source tree
+if [[ "${ASSEMBLE}" == 'yes' ]]; then
+    echo -e "\033[0;37m==> \033[1;37mAssemble\033[0m"
     ./assemble.pl -DskipTests -DskipITs -Dopennms.home=/opt/opennms -pdir
 fi
 
@@ -205,4 +216,3 @@ if [[ "${OPEN}" == 'yes' ]]; then
     echo -e "\033[0;37m==> \033[1;37mOpen browser\033[0m"
     xdg-open "http://localhost:8980/opennms" &
 fi
-
